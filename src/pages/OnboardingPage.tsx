@@ -21,7 +21,7 @@ export function OnboardingPage() {
     <main className="min-h-screen flex items-center justify-center bg-background text-foreground p-6">
       <form onSubmit={handleSubmit} className="w-full max-w-sm flex flex-col gap-6">
         <header className="text-center space-y-2">
-          <h1 className="text-3xl font-medium">Welcome</h1>
+          <h1 className="text-3xl font-medium">Welcome Pheebs</h1>
           <p className="text-sm text-muted-foreground">
             Tell us about your little one to get started.
           </p>
@@ -33,7 +33,7 @@ export function OnboardingPage() {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Layla"
+            placeholder="e.g. Asiya"
             required
             autoFocus
             className="px-4 py-3 rounded-xl border border-border bg-surface text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
