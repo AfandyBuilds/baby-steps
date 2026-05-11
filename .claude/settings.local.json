@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($dirs = @\\('src\\\\app','src\\\\features\\\\feeds','src\\\\features\\\\sleep','src\\\\features\\\\diapers','src\\\\features\\\\baby','src\\\\shared\\\\db','src\\\\shared\\\\ui','src\\\\shared\\\\time','src\\\\shared\\\\theme','src\\\\pages'\\); foreach \\($d in $dirs\\) { New-Item -ItemType Directory -Path $d -Force | Out-Null; New-Item -ItemType File -Path \"$d\\\\.gitkeep\" -Force | Out-Null }; Write-Output \"folder layout created\")",
+      "PowerShell(npm run build 2>&1)",
+      "PowerShell(npm run lint 2>&1)",
+      "PowerShell(npm run format 2>&1)",
+      "PowerShell(npm run dev 2>&1)",
+      "PowerShell(npm install dexie dexie-react-hooks)",
+      "PowerShell(npm install -D vitest @vitest/ui fake-indexeddb 2>&1)",
+      "PowerShell(npx vitest run 2>&1)",
+      "PowerShell(npm install react-router 2>&1)"
+    ]
+  }
+}

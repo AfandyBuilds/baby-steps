@@ -1,0 +1,49 @@
+@import 'tailwindcss';
+
+/* Class-based dark mode: utilities prefixed with `dark:` activate when
+   the <html> element has the `.dark` class. We toggle that from JS so
+   we can later layer manual override on top of system preference. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* ---- Light palette: soft & warm ---- */
+  --color-background: #fbf7f1; /* cream */
+  --color-foreground: #3d2f26; /* warm dark brown */
+  --color-surface: #f5efe6; /* slightly warmer cream for cards/sections */
+  --color-muted: #efe7da;
+  --color-muted-foreground: #8c7b6f;
+  --color-border: #e8dfd2;
+  --color-primary: #e8a087; /* warm rose */
+  --color-primary-foreground: #ffffff;
+  --color-accent: #d4a373; /* warm amber */
+
+  --font-sans: 'Inter', system-ui, 'Segoe UI', Roboto, sans-serif;
+  --radius-base: 0.75rem;
+}
+
+/* ---- Dark palette: warm-tinted, not pure black (easier at 3am) ---- */
+.dark {
+  --color-background: #1a1410;
+  --color-foreground: #f5efe6;
+  --color-surface: #241d17;
+  --color-muted: #2d251e;
+  --color-muted-foreground: #a89a8e;
+  --color-border: #322820;
+  --color-primary: #f0b299;
+  --color-primary-foreground: #1a1410;
+  --color-accent: #e5c09a;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  -webkit-font-smoothing: antialiased;
+}
