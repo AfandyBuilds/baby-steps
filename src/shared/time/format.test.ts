@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatDayLabel, formatTime, formatTimeAgo, startOfDay } from './format'
+import { formatDayLabel, formatDuration, formatTime, formatTimeAgo, startOfDay } from './format'
 
 describe('formatTimeAgo', () => {
   const now = 1_700_000_000_000
@@ -51,6 +51,32 @@ describe('formatTime', () => {
   it('formats as 24-hour HH:MM', () => {
     const d = new Date('2026-05-11T14:32:00')
     expect(formatTime(d)).toMatch(/^14:32$/)
+  })
+})
+
+describe('formatDuration', () => {
+  it('formats sub-minute as seconds only', () => {
+    expect(formatDuration(45 * 1000)).toBe('45s')
+  })
+
+  it('formats minutes + seconds', () => {
+    expect(formatDuration((3 * 60 + 14) * 1000)).toBe('3m 14s')
+  })
+
+  it('drops seconds when zero', () => {
+    expect(formatDuration(5 * 60 * 1000)).toBe('5m')
+  })
+
+  it('formats hours + minutes', () => {
+    expect(formatDuration((2 * 3600 + 17 * 60) * 1000)).toBe('2h 17m')
+  })
+
+  it('drops minutes when zero', () => {
+    expect(formatDuration(2 * 3600 * 1000)).toBe('2h')
+  })
+
+  it('treats negative input as zero', () => {
+    expect(formatDuration(-100)).toBe('0s')
   })
 })
 

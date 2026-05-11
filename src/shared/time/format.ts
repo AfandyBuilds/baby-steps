@@ -51,3 +51,17 @@ export function startOfDay(timestamp: number = Date.now()): number {
   d.setHours(0, 0, 0, 0)
   return d.getTime()
 }
+
+/**
+ * Format a duration in ms as "Xh Ym" / "Xm Ys" / "Xs".
+ * Drops trailing zero components for compactness.
+ */
+export function formatDuration(ms: number): string {
+  const sec = Math.max(0, Math.floor(ms / 1000))
+  const hr = Math.floor(sec / 3600)
+  const min = Math.floor((sec % 3600) / 60)
+  const s = sec % 60
+  if (hr > 0) return min > 0 ? `${hr}h ${min}m` : `${hr}h`
+  if (min > 0) return s > 0 ? `${min}m ${s}s` : `${min}m`
+  return `${s}s`
+}
