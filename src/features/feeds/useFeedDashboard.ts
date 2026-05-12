@@ -1,5 +1,11 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { Feeds, type BottleFeedEntry, type BreastFeedEntry, type FeedEntry } from '../../shared/db'
+import {
+  Feeds,
+  type BottleFeedEntry,
+  type BreastFeedEntry,
+  type FeedEntry,
+  type SolidFeedEntry,
+} from '../../shared/db'
 import { startOfDay } from '../../shared/time/format'
 
 export interface FeedDashboard {
@@ -15,6 +21,8 @@ export interface FeedDashboard {
   runningBreast: BreastFeedEntry | undefined
   /** Last completed breast feed's `lastSide` — drives the "next side" hint. */
   lastBreastSide: 'L' | 'R' | null
+  /** Up to 5 distinct food names from recent solid feeds, newest unique first. */
+  recentFoods: string[]
 }
 
 export function useFeedDashboard(babyId: string): FeedDashboard | undefined {
@@ -40,6 +48,21 @@ export function useFeedDashboard(babyId: string): FeedDashboard | undefined {
     )
     const lastBreastSide = lastCompletedBreast?.lastSide ?? null
 
+    // Distinct recent foods. Lowercase key for dedup, preserve original casing
+    // in the displayed chip.
+    const recentFoods: string[] = []
+    const seen = new Set<string>()
+    for (const f of all) {
+      if (f.type !== 'solid') continue
+      const solid = f as SolidFeedEntry
+      const name = solid.food.trim()
+      const key = name.toLowerCase()
+      if (!name || seen.has(key)) continue
+      recentFoods.push(name)
+      seen.add(key)
+      if (recentFoods.length >= 5) break
+    }
+
     return {
       todayCount: today.length,
       todayBottleMl,
@@ -47,6 +70,7 @@ export function useFeedDashboard(babyId: string): FeedDashboard | undefined {
       lastBottle,
       runningBreast,
       lastBreastSide,
+      recentFoods,
     }
   }, [babyId])
 }

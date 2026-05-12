@@ -1,52 +1,33 @@
-import { type FormEvent, useState } from 'react'
+import { useState } from 'react'
 import { useCurrentBaby } from '../../app/BabyContext'
 import { Feeds, type FeedEntry } from '../../shared/db'
 import { formatDuration, formatTimeAgo } from '../../shared/time/format'
+import { BottleForm } from './BottleForm'
 import { BreastRunning } from './BreastRunning'
+import { SolidForm } from './SolidForm'
 import { useFeedDashboard } from './useFeedDashboard'
 
-type Contents = 'formula' | 'breastmilk'
+type FormMode = 'none' | 'bottle' | 'solid'
 type Side = 'L' | 'R'
 
 function lastFeedLine(feed: FeedEntry | undefined): string {
   if (!feed) return 'Last: none yet'
-  if (feed.type === 'bottle') {
-    return `Last: ${feed.amountMl} ml · ${formatTimeAgo(feed.startedAt)}`
+  switch (feed.type) {
+    case 'bottle':
+      return `Last: ${feed.amountMl} ml · ${formatTimeAgo(feed.startedAt)}`
+    case 'breast': {
+      const total = feed.leftDurationMs + feed.rightDurationMs
+      return `Last: breast ${formatDuration(total)} · ${formatTimeAgo(feed.startedAt)}`
+    }
+    case 'solid':
+      return `Last: ${feed.food} · ${formatTimeAgo(feed.startedAt)}`
   }
-  if (feed.type === 'breast') {
-    const total = feed.leftDurationMs + feed.rightDurationMs
-    return `Last: breast ${formatDuration(total)} · ${formatTimeAgo(feed.startedAt)}`
-  }
-  return `Last: feed · ${formatTimeAgo(feed.startedAt)}`
 }
 
 export function FeedQuickLog() {
   const baby = useCurrentBaby()
   const dash = useFeedDashboard(baby.id)
-  const [isBottleFormOpen, setIsBottleFormOpen] = useState(false)
-  const [amount, setAmount] = useState<string>('120')
-  const [contents, setContents] = useState<Contents>('formula')
-
-  function openBottleForm() {
-    setAmount(String(dash?.lastBottle?.amountMl ?? 120))
-    setContents(dash?.lastBottle?.contents ?? 'formula')
-    setIsBottleFormOpen(true)
-  }
-
-  function submitBottle(e: FormEvent) {
-    e.preventDefault()
-    const ml = parseInt(amount, 10)
-    if (!Number.isFinite(ml) || ml <= 0) return
-    const t = Date.now()
-    void Feeds.createBottleFeed({
-      babyId: baby.id,
-      startedAt: t,
-      endedAt: t,
-      amountMl: ml,
-      contents,
-    })
-    setIsBottleFormOpen(false)
-  }
+  const [formMode, setFormMode] = useState<FormMode>('none')
 
   const runningBreast = dash?.runningBreast
   // Recommend the opposite of her last completed breast feed.
@@ -65,61 +46,19 @@ export function FeedQuickLog() {
 
       {runningBreast ? (
         <BreastRunning feed={runningBreast} />
-      ) : isBottleFormOpen ? (
-        <form onSubmit={submitBottle} className="space-y-3">
-          <label className="flex flex-col gap-2">
-            <span className="text-sm font-medium">Amount (ml)</span>
-            <input
-              type="number"
-              inputMode="numeric"
-              min="1"
-              max="500"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              required
-              autoFocus
-              className="px-4 py-3 rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary tabular-nums"
-            />
-          </label>
-
-          <div className="grid grid-cols-2 gap-2">
-            {(['formula', 'breastmilk'] as const).map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => setContents(c)}
-                className={`py-2 rounded-xl border text-sm font-medium transition ${
-                  contents === c
-                    ? 'border-primary bg-primary text-primary-foreground'
-                    : 'border-border bg-background text-foreground hover:border-muted-foreground'
-                }`}
-              >
-                {c === 'formula' ? 'Formula' : 'Breastmilk'}
-              </button>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setIsBottleFormOpen(false)}
-              className="py-3 rounded-xl border border-border bg-background text-foreground hover:border-muted-foreground transition"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="py-3 rounded-xl bg-primary text-primary-foreground font-medium hover:opacity-90 transition active:scale-95"
-            >
-              Save
-            </button>
-          </div>
-        </form>
+      ) : formMode === 'bottle' ? (
+        <BottleForm
+          defaultAmount={dash?.lastBottle?.amountMl ?? 120}
+          defaultContents={dash?.lastBottle?.contents ?? 'formula'}
+          onClose={() => setFormMode('none')}
+        />
+      ) : formMode === 'solid' ? (
+        <SolidForm recentFoods={dash?.recentFoods ?? []} onClose={() => setFormMode('none')} />
       ) : (
         <>
           <button
             type="button"
-            onClick={openBottleForm}
+            onClick={() => setFormMode('bottle')}
             className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-medium hover:opacity-90 transition active:scale-95"
           >
             + Log bottle
@@ -152,6 +91,14 @@ export function FeedQuickLog() {
               ))}
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setFormMode('solid')}
+            className="w-full py-3 rounded-xl border border-border bg-background text-sm font-medium hover:border-muted-foreground transition"
+          >
+            + Log solid food
+          </button>
 
           <p className="text-xs text-muted-foreground">{lastFeedLine(dash?.lastFeed)}</p>
         </>
