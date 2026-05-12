@@ -5,6 +5,18 @@ import type { ThemeMode } from '../shared/theme/ThemeContext'
 import { Babies } from '../shared/db'
 import { exportJson } from '../shared/data/exportJson'
 
+const LAST_EXPORTED_KEY = 'baby-steps.lastExported'
+
+function formatExportDate(iso: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date(iso))
+}
+
 const themeOptions: { value: ThemeMode; label: string }[] = [
   { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' },
@@ -18,6 +30,9 @@ export function SettingsPage() {
   const [name, setName] = useState(baby.name)
   const [birthDate, setBirthDate] = useState(baby.birthDate)
   const [profileSaved, setProfileSaved] = useState(false)
+  const [lastExported, setLastExported] = useState<string | null>(
+    () => localStorage.getItem(LAST_EXPORTED_KEY),
+  )
 
   async function saveProfile(e: FormEvent) {
     e.preventDefault()
@@ -100,13 +115,30 @@ export function SettingsPage() {
         </p>
         <button
           type="button"
-          onClick={() => {
-            void exportJson()
+          onClick={async () => {
+            await exportJson()
+            const iso = new Date().toISOString()
+            localStorage.setItem(LAST_EXPORTED_KEY, iso)
+            setLastExported(iso)
           }}
           className="px-4 py-2 rounded-xl border border-border bg-surface text-foreground hover:border-muted-foreground transition"
         >
           Export to JSON
         </button>
+        {lastExported && (
+          <p className="text-xs text-muted-foreground">
+            Last exported: {formatExportDate(lastExported)}
+          </p>
+        )}
+        <div className="rounded-xl border border-border bg-surface p-4 space-y-1.5">
+          <p className="text-sm font-medium">Add to Home Screen</p>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            On iPhone: tap the Share button in Safari, then "Add to Home Screen."
+            <br />
+            On Android: tap the three-dot menu in Chrome, then "Add to Home Screen" or "Install
+            app."
+          </p>
+        </div>
       </div>
     </section>
   )

@@ -32,7 +32,14 @@ export function SleepHistoryList() {
     return <p className="text-sm text-muted-foreground">Loading…</p>
   }
   if (entries.length === 0) {
-    return <p className="text-sm text-muted-foreground">No sleeps logged yet.</p>
+    return (
+      <div className="rounded-xl border border-border bg-surface p-6 text-center space-y-1">
+        <p className="text-sm font-medium">No sleep logged yet</p>
+        <p className="text-xs text-muted-foreground">
+          Start a nap or overnight from the Home tab.
+        </p>
+      </div>
+    )
   }
 
   const groups = groupByDay(entries)

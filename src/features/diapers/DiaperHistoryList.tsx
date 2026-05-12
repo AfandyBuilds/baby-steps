@@ -39,9 +39,12 @@ export function DiaperHistoryList() {
   }
   if (entries.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">
-        No diapers logged yet. Tap a button on the home screen to get started.
-      </p>
+      <div className="rounded-xl border border-border bg-surface p-6 text-center space-y-1">
+        <p className="text-sm font-medium">No diapers logged yet</p>
+        <p className="text-xs text-muted-foreground">
+          Tap Wet, Dirty, or Both on the Home tab to log a change.
+        </p>
+      </div>
     )
   }
 
