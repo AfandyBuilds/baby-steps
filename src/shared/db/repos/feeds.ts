@@ -126,6 +126,74 @@ export async function endFeed(id: string, endedAt: number): Promise<FeedEntry> {
   return updated
 }
 
+/**
+ * Switches the active side on a running breast feed. The time spent on the
+ * previous side since the last side-change (or since `startedAt` for the
+ * first switch) is added to that side's cumulative duration, then `lastSide`
+ * flips. The "currently active side" elapsed time is always derivable as
+ * `now - startedAt - leftDurationMs - rightDurationMs`, so we don't need a
+ * separate `sideStartedAt` field.
+ */
+export async function switchBreastSide(
+  id: string,
+  newSide: 'L' | 'R',
+  switchedAt: number,
+): Promise<BreastFeedEntry> {
+  const existing = await db.feeds.get(id)
+  if (!existing) throw new Error(`Feed ${id} not found`)
+  if (existing.type !== 'breast') {
+    throw new Error(`Feed ${id} is not a breast feed`)
+  }
+  if (existing.endedAt !== null) {
+    throw new Error(`Breast feed ${id} is already ended`)
+  }
+  const onCurrent = Math.max(
+    0,
+    switchedAt - existing.startedAt - existing.leftDurationMs - existing.rightDurationMs,
+  )
+  const updated: BreastFeedEntry = {
+    ...existing,
+    leftDurationMs:
+      existing.lastSide === 'L' ? existing.leftDurationMs + onCurrent : existing.leftDurationMs,
+    rightDurationMs:
+      existing.lastSide === 'R' ? existing.rightDurationMs + onCurrent : existing.rightDurationMs,
+    lastSide: newSide,
+    updatedAt: switchedAt,
+  }
+  await db.feeds.put(updated)
+  return updated
+}
+
+/**
+ * Ends a running breast feed. The currently-active side's accumulated time
+ * is folded into its cumulative duration, then `endedAt` is set.
+ */
+export async function endBreastFeed(id: string, endedAt: number): Promise<BreastFeedEntry> {
+  const existing = await db.feeds.get(id)
+  if (!existing) throw new Error(`Feed ${id} not found`)
+  if (existing.type !== 'breast') {
+    throw new Error(`Feed ${id} is not a breast feed`)
+  }
+  if (existing.endedAt !== null) {
+    throw new Error(`Breast feed ${id} is already ended`)
+  }
+  const onCurrent = Math.max(
+    0,
+    endedAt - existing.startedAt - existing.leftDurationMs - existing.rightDurationMs,
+  )
+  const updated: BreastFeedEntry = {
+    ...existing,
+    leftDurationMs:
+      existing.lastSide === 'L' ? existing.leftDurationMs + onCurrent : existing.leftDurationMs,
+    rightDurationMs:
+      existing.lastSide === 'R' ? existing.rightDurationMs + onCurrent : existing.rightDurationMs,
+    endedAt,
+    updatedAt: endedAt,
+  }
+  await db.feeds.put(updated)
+  return updated
+}
+
 export async function softDeleteFeed(id: string): Promise<void> {
   const existing = await db.feeds.get(id)
   if (!existing) return

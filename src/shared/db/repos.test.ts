@@ -184,6 +184,75 @@ describe('Feeds', () => {
   })
 })
 
+describe('Breast feed math', () => {
+  let babyId: string
+  beforeEach(async () => {
+    babyId = await seedBaby()
+  })
+
+  it('switchBreastSide accumulates time on the previous side', async () => {
+    const T0 = 10_000
+    const feed = await Feeds.createBreastFeed({
+      babyId,
+      startedAt: T0,
+      lastSide: 'L',
+    })
+
+    const T1 = T0 + 5 * 60_000
+    const switched = await Feeds.switchBreastSide(feed.id, 'R', T1)
+    expect(switched.leftDurationMs).toBe(5 * 60_000)
+    expect(switched.rightDurationMs).toBe(0)
+    expect(switched.lastSide).toBe('R')
+  })
+
+  it('switchBreastSide twice accumulates both sides', async () => {
+    const feed = await Feeds.createBreastFeed({
+      babyId,
+      startedAt: 0,
+      lastSide: 'L',
+    })
+    await Feeds.switchBreastSide(feed.id, 'R', 5 * 60_000)
+    const after = await Feeds.switchBreastSide(feed.id, 'L', 8 * 60_000)
+    expect(after.leftDurationMs).toBe(5 * 60_000)
+    expect(after.rightDurationMs).toBe(3 * 60_000)
+    expect(after.lastSide).toBe('L')
+  })
+
+  it('endBreastFeed folds the final side and sets endedAt', async () => {
+    const feed = await Feeds.createBreastFeed({
+      babyId,
+      startedAt: 0,
+      lastSide: 'L',
+    })
+    await Feeds.switchBreastSide(feed.id, 'R', 5 * 60_000)
+    const ended = await Feeds.endBreastFeed(feed.id, 8 * 60_000)
+    expect(ended.endedAt).toBe(8 * 60_000)
+    expect(ended.leftDurationMs).toBe(5 * 60_000)
+    expect(ended.rightDurationMs).toBe(3 * 60_000)
+  })
+
+  it('endBreastFeed without a side switch records all time on starting side', async () => {
+    const feed = await Feeds.createBreastFeed({
+      babyId,
+      startedAt: 0,
+      lastSide: 'L',
+    })
+    const ended = await Feeds.endBreastFeed(feed.id, 10 * 60_000)
+    expect(ended.leftDurationMs).toBe(10 * 60_000)
+    expect(ended.rightDurationMs).toBe(0)
+  })
+
+  it('switchBreastSide throws on an already-ended feed', async () => {
+    const feed = await Feeds.createBreastFeed({
+      babyId,
+      startedAt: 0,
+      lastSide: 'L',
+    })
+    await Feeds.endBreastFeed(feed.id, 5 * 60_000)
+    await expect(Feeds.switchBreastSide(feed.id, 'R', 6 * 60_000)).rejects.toThrow()
+  })
+})
+
 describe('Sleeps', () => {
   let babyId: string
   beforeEach(async () => {

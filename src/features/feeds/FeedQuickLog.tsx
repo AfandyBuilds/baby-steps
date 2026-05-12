@@ -1,36 +1,39 @@
 import { type FormEvent, useState } from 'react'
 import { useCurrentBaby } from '../../app/BabyContext'
 import { Feeds, type FeedEntry } from '../../shared/db'
-import { formatTimeAgo } from '../../shared/time/format'
+import { formatDuration, formatTimeAgo } from '../../shared/time/format'
+import { BreastRunning } from './BreastRunning'
 import { useFeedDashboard } from './useFeedDashboard'
 
 type Contents = 'formula' | 'breastmilk'
+type Side = 'L' | 'R'
 
 function lastFeedLine(feed: FeedEntry | undefined): string {
   if (!feed) return 'Last: none yet'
   if (feed.type === 'bottle') {
     return `Last: ${feed.amountMl} ml · ${formatTimeAgo(feed.startedAt)}`
   }
-  // Breast / solid land in later milestones; keep a fallback for safety.
+  if (feed.type === 'breast') {
+    const total = feed.leftDurationMs + feed.rightDurationMs
+    return `Last: breast ${formatDuration(total)} · ${formatTimeAgo(feed.startedAt)}`
+  }
   return `Last: feed · ${formatTimeAgo(feed.startedAt)}`
 }
 
 export function FeedQuickLog() {
   const baby = useCurrentBaby()
   const dash = useFeedDashboard(baby.id)
-
-  const [isOpen, setIsOpen] = useState(false)
+  const [isBottleFormOpen, setIsBottleFormOpen] = useState(false)
   const [amount, setAmount] = useState<string>('120')
   const [contents, setContents] = useState<Contents>('formula')
 
-  function open() {
-    // Pre-fill with her last bottle so a steady-pattern feed is one extra tap.
+  function openBottleForm() {
     setAmount(String(dash?.lastBottle?.amountMl ?? 120))
     setContents(dash?.lastBottle?.contents ?? 'formula')
-    setIsOpen(true)
+    setIsBottleFormOpen(true)
   }
 
-  function handleSubmit(e: FormEvent) {
+  function submitBottle(e: FormEvent) {
     e.preventDefault()
     const ml = parseInt(amount, 10)
     if (!Number.isFinite(ml) || ml <= 0) return
@@ -42,8 +45,12 @@ export function FeedQuickLog() {
       amountMl: ml,
       contents,
     })
-    setIsOpen(false)
+    setIsBottleFormOpen(false)
   }
+
+  const runningBreast = dash?.runningBreast
+  // Recommend the opposite of her last completed breast feed.
+  const nextSide: Side = dash?.lastBreastSide === 'L' ? 'R' : 'L'
 
   return (
     <article className="rounded-2xl border border-border bg-surface p-4 space-y-4">
@@ -56,8 +63,10 @@ export function FeedQuickLog() {
         </span>
       </header>
 
-      {isOpen ? (
-        <form onSubmit={handleSubmit} className="space-y-3">
+      {runningBreast ? (
+        <BreastRunning feed={runningBreast} />
+      ) : isBottleFormOpen ? (
+        <form onSubmit={submitBottle} className="space-y-3">
           <label className="flex flex-col gap-2">
             <span className="text-sm font-medium">Amount (ml)</span>
             <input
@@ -93,7 +102,7 @@ export function FeedQuickLog() {
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
-              onClick={() => setIsOpen(false)}
+              onClick={() => setIsBottleFormOpen(false)}
               className="py-3 rounded-xl border border-border bg-background text-foreground hover:border-muted-foreground transition"
             >
               Cancel
@@ -110,11 +119,40 @@ export function FeedQuickLog() {
         <>
           <button
             type="button"
-            onClick={open}
+            onClick={openBottleForm}
             className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-medium hover:opacity-90 transition active:scale-95"
           >
             + Log bottle
           </button>
+
+          <div className="space-y-1.5">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              Breast{dash?.lastBreastSide ? ` · next: ${nextSide}` : ''}
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {(['L', 'R'] as const).map((side) => (
+                <button
+                  key={side}
+                  type="button"
+                  onClick={() => {
+                    void Feeds.createBreastFeed({
+                      babyId: baby.id,
+                      startedAt: Date.now(),
+                      lastSide: side,
+                    })
+                  }}
+                  className={`py-3 rounded-xl border text-sm font-medium bg-background hover:border-muted-foreground transition ${
+                    dash?.lastBreastSide && nextSide === side
+                      ? 'border-primary text-primary'
+                      : 'border-border text-foreground'
+                  }`}
+                >
+                  Start {side}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <p className="text-xs text-muted-foreground">{lastFeedLine(dash?.lastFeed)}</p>
         </>
       )}
